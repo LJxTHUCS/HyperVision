@@ -84,21 +84,27 @@ public:
         return p_parse_result;
     }
 
-    void import_dataset(void) {
+    void import_dataset(vector<string> ldps, vector<string> llps) {
         __START_FTIMMER__
-        ifstream _ifd(load_data_path);
         vector<string> string_temp;
-        while (true) {
-            string _s;
-            if (getline(_ifd, _s)) {
-                string_temp.push_back(_s);
-            } else {
-                break;
+
+        for (auto filename: ldps) {
+            ifstream _ifd(filename);
+            while (true) {
+                string _s;
+                if (getline(_ifd, _s)) {
+                    string_temp.push_back(_s);
+                } else {
+                    break;
+                }
             }
+            _ifd.close();
         }
-        _ifd.close();
+
         size_t num_pkt = string_temp.size();
         p_parse_result = make_shared<decltype(p_parse_result)::element_type>(num_pkt);
+
+        LOGF("%ld", num_pkt);
 
         const size_t multiplex_num = 64;
         const u_int32_t part_size = ceil(((double) num_pkt) / ((double) multiplex_num));
@@ -132,15 +138,20 @@ public:
             t.join();
 
 
-        ifstream _ifl(load_label_path);
         p_label = make_shared<decltype(p_label)::element_type>();
-        string ll;
-        _ifl >> ll;
-        for (const char a: ll) {
-            p_label->push_back(a == '1');
+
+        for (auto filename: llps) {
+            ifstream _ifl(filename); 
+            string ll;
+            _ifl >> ll;
+            for (const char a: ll) {
+                p_label->push_back(a == '1');
+            }
+            _ifl.close();
         }
-        _ifl.close();
+
         assert(p_label->size() == p_parse_result->size());
+
 
         __STOP_FTIMER__
         __PRINTF_EXE_TIME__

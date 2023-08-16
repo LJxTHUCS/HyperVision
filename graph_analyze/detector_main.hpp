@@ -28,7 +28,7 @@ private:
 
 
     bool save_result_enable = false;
-    string save_result_path = "../temp/default.json";
+    string save_result_path = "../temp/default.txt";
 
 public:
     void start(void) {
@@ -55,9 +55,59 @@ public:
             LOGF("Load & split datasets.");
             const auto p_dataset_constructor = make_shared<basic_dataset>(p_parse_result);
             p_dataset_constructor->configure_via_json(jin_main["dataset_construct"]);
-            p_dataset_constructor->import_dataset();
-            p_label = p_dataset_constructor->get_label();
-            p_parse_result = p_dataset_constructor->get_raw_pkt();
+
+            p_dataset_constructor->import_dataset({
+                "../data/telnet_lrscan.data",
+                "../data/charrdos.data",
+                "../data/icmpscan.data",
+                "../data/codeinject.data",
+                "../data/sshscan.data",
+                // "../data/udpsdos.data",
+                // "../data/scrapy.data",
+                // "../data/sqlscan.data",
+                // "../data/coinminer.data",
+                // "../data/oracle.data",
+                // "../data/httpscan.data"
+            },{
+                "../data/telnet_lrscan.label",
+                "../data/charrdos.label",
+                "../data/icmpscan.label",
+                "../data/codeinject.label",
+                "../data/sshscan.label",
+                // "../data/udpsdos.label",
+                // "../data/scrapy.label",
+                // "../data/sqlscan.label",
+                // "../data/coinminer.label",
+                // "../data/oracle.label",
+                // "../data/httpscan.label"
+            });
+
+            // Entry num of dataset
+            size_t size = p_dataset_constructor->get_label()->size();
+
+            // random shuffle a sequence vector
+            vector<size_t> shuf;
+            shuf.reserve(size);
+            for (size_t i = 0; i < size; ++i) {
+                shuf.emplace_back(i);
+            }
+            std::random_device rd;
+            std::mt19937 g(rd());
+            std::shuffle(shuf.begin(), shuf.end(), g);
+            
+            // shuffle p_label
+            p_label = make_shared<binary_label_t>();
+            for (size_t i = 0; i < size; ++i) {
+                p_label->emplace_back(p_dataset_constructor->get_label()->at(i));
+            }
+
+            // shuffle p_parse_result
+            p_parse_result = make_shared<vector<shared_ptr<basic_packet>>>();
+            for (size_t i = 0; i < size; ++i) {
+                p_parse_result->emplace_back(p_dataset_constructor->get_raw_pkt()->at(i));
+            }
+
+            LOGF("Size: %ld, %ld", p_parse_result->size(), p_label->size());
         } else {
             LOGF("Dataset not found.");
         }
@@ -80,9 +130,9 @@ public:
         const auto p_graph = make_shared<traffic_graph>(p_short_edges, p_long_edges);
         p_graph->config_via_json(jin_main["graph_analyze"]);
         p_graph->parse_edge();
-        // p_graph->dump_graph_statistic();
-        // p_graph->dump_edge_anomly();
-        // p_graph->dump_vertex_anomly();
+        p_graph->dump_graph_statistic();
+        p_graph->dump_edge_anomly();
+        p_graph->dump_vertex_anomly();
         p_graph->graph_detect();
         p_loss = p_graph->get_final_pkt_score(p_label);
 
